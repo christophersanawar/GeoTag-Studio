@@ -1,4 +1,4 @@
 User-agent: *
 Allow: /
 
-Sitemap: https://geotag-studio.vercel.app/sitemap.xml
+Sitemap: https://geotag-studio-orcin.vercel.app/sitemap.xml
