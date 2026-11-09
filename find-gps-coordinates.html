@@ -22,6 +22,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=Manrope:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/piexifjs/1.0.6/piexif.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 <style>
@@ -210,14 +211,17 @@ footer.site b{color:var(--neon);text-shadow:0 0 12px rgba(0,240,255,.6)}
 
 <div class="modal" id="mAuth"><div class="mbox">
   <button class="x" data-close>×</button>
-  <h3 id="aTitle">Create your account</h3><p id="aSub">Free plan includes 10 geotagged photos every day.</p>
+  <h3 id="aTitle">Create your account</h3><p id="aSub"></p>
   <label>Email</label><input id="aEmail" type="email" autocomplete="email" placeholder="you@example.com">
-  <label>Password</label><input id="aPass" type="password" autocomplete="current-password" placeholder="Min. 6 characters">
+  <div id="aPassWrap"><label>Password</label><input id="aPass" type="password" autocomplete="current-password" placeholder="Min. 8 characters"></div>
   <div class="msg" id="aMsg"></div>
   <button class="btn neon" id="aGo">Sign up</button>
-  <p style="text-align:center;margin:14px 0 0"><span id="aSwitchTxt">Already have an account?</span> <button class="link" id="aSwitch">Log in</button></p>
+  <p style="text-align:center;margin:14px 0 0"><span id="aSwitchTxt"></span> <button class="link" id="aSwitch"></button></p>
+  <p style="text-align:center;margin:6px 0 0"><button class="link" id="aForgot">Forgot password?</button></p>
 </div></div>
-
+<div class="modal" id="mReset"><div class="mbox"><h3>Set a new password</h3><p>Choose a new password for your account.</p>
+  <label>New password</label><input id="rPass" type="password" autocomplete="new-password" placeholder="Min. 8 characters"><div class="msg" id="rMsg"></div>
+  <button class="btn neon" id="rGo">Update password</button></div></div>
 <div class="modal" id="mPay"><div class="mbox">
 <button class="x" data-close>×</button><h3>Upgrade to Pro</h3><p id="payAmt"></p>
 <div id="payPk">
@@ -236,7 +240,6 @@ footer.site b{color:var(--neon);text-shadow:0 0 12px rgba(0,240,255,.6)}
 </div>
 <div id="payUs" hidden><p>For USD payments we send you a secure payment link. Tap below and we will reply with it.</p><a class="btn neon" id="usWa" target="_blank" rel="noopener">Request link on WhatsApp</a></div>
 <p class="fine">All payments are final. We do not offer refunds in any case. See the <a href="/privacy" data-close>Privacy Policy</a>.</p>
-<p class="fine" id="simRow">Preview only: <button class="link" id="simPro">simulate approval</button></p>
 </div></div>
 <a class="wafab" id="waFab" target="_blank" rel="noopener" aria-label="Chat on WhatsApp" title="Chat on WhatsApp"><svg viewBox="0 0 32 32"><path d="M16 3C9 3 3.3 8.6 3.3 15.5c0 2.3.6 4.4 1.8 6.3L3 29l7.4-1.9a12.9 12.9 0 005.6 1.3c7 0 12.7-5.600 12.7-12.500S23 3 16 3zm0 23.300c-1.800 0-3.600-.5-5.100-1.400l-.4-.2-4.400 1.100 1.200-4.200-.3-.4a10.400 10.400 0 01-1.700-5.700C5.300 9.800 10.100 5.200 16 5.200s10.700 4.600 10.700 10.300S21.900 26.300 16 26.300zm5.900-7.700c-.3-.2-1.900-.9-2.200-1-.3-.1-.5-.2-.7.200-.2.300-.8 1-1 1.200-.2.200-.4.200-.7.100-.3-.2-1.400-.5-2.600-1.600-1-.9-1.600-1.900-1.800-2.200-.2-.3 0-.5.100-.7l.5-.5c.1-.2.200-.3.300-.5.100-.2 0-.4 0-.5l-1-2.300c-.2-.6-.5-.5-.7-.5h-.6c-.2 0-.5.100-.8.400-.3.300-1.100 1.100-1.100 2.600s1.100 3 1.300 3.200c.2.2 2.200 3.400 5.400 4.700 3.200 1.300 3.200.9 3.800.8.600-.1 1.900-.8 2.200-1.500.3-.7.300-1.400.2-1.500-.1-.2-.3-.3-.6-.4z"/></svg></a>
 <div class="toast" id="toast"></div>
@@ -245,7 +248,7 @@ footer.site b{color:var(--neon);text-shadow:0 0 12px rgba(0,240,255,.6)}
 (function(){
 const CONFIG={
   pkr:'PKR 1,500', usd:'$6.9',
-  email:'christophersanawar600@gmail.com',
+  email:'christophersanawar600@gmail.com',supabaseUrl:'https://pycagkaicbpstvgmqtmo.supabase.co',supabaseKey:'sb_publishable_TaGZ6ZdkHz4tGa17ZcespA_cUpB1IBJ',
   prices:{solo:{m:{usd:6.9,pkr:1499},y:{usd:69.99,pkr:14990}},team:{m:{usd:4.99,pkr:1099},y:{usd:49.99,pkr:10990}}},
   phone:'03131443519',wa:'923131443519',linkedin:'https://www.linkedin.com/in/christopher-sanawar/',demo:false,
   bank:{title:'Christopher Sanawar'},
@@ -257,45 +260,59 @@ const store={get(k,d){try{const v=localStorage.getItem(k);return v?JSON.parse(v)
 function toast(t){const e=$('toast');e.textContent=t;e.classList.add('on');clearTimeout(toast.t);toast.t=setTimeout(()=>e.classList.remove('on'),3200)}
 $('yr').textContent=new Date().getFullYear();
 
-/* ---------- accounts (preview: browser storage only) ---------- */
-const monthKey=()=>new Date().toISOString().slice(0,10);
-const users=()=>store.get('gts_users',{});
-const me=()=>{const e=store.get('gts_session',null);return e?users()[e]:null};
-const isPro=u=>!!u&&(['solo','team','pro'].includes(u.plan)||Object.values(users()).some(o=>o.team&&o.team.members.includes(u.email)));
-function saveUser(u){const all=users();all[u.email]=u;store.set('gts_users',all)}
-function used(u){return u.usage&&u.usage.m===monthKey()?u.usage.n:0}
+/* ---------- accounts (Supabase) ---------- */
+let sb=null;const S={st:null};
+try{sb=supabase.createClient(CONFIG.supabaseUrl,CONFIG.supabaseKey,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true}})}catch(e){}
+const me=()=>S.st,isPro=u=>!!(u&&u.pro),used=u=>u?u.used_today:0;
+async function loadStatus(){
+  if(!sb)return renderAcct();
+  try{const r=await sb.auth.getSession();if(!r.data.session)S.st=null;else{const q=await sb.rpc('my_status');S.st=q.error?null:q.data}}catch(e){S.st=null}
+  renderAcct();const av=document.getElementById('v-admin');if(av&&!av.hidden)loadAdmin()}
 function renderAcct(){
-  const u=me(),a=$('acct');
-  if(!u){a.innerHTML='<button class="btn ghost" style="color:#fff;border-color:rgba(255,255,255,.3)" data-act="login">Log in</button><button class="btn neon" data-act="signup">Sign up</button>'}
-  else{a.innerHTML='<span class="pill '+(isPro(u)?'pro':'')+'">'+(isPro(u)?'PRO':'FREE · '+Math.max(0,CONFIG.freeLimit-used(u))+' left')+'</span>'+(isPro(u)?'':'<button class="btn neon" data-act="buy">Upgrade</button>')+(u.plan==='team'?'<button class="btn ghost" style="color:#fff;border-color:rgba(255,255,255,.3)" data-act="team">Team</button>':'')+'<button class="btn ghost" style="color:#fff;border-color:rgba(255,255,255,.3)" data-act="logout">Log out</button>'}
+  const u=me(),a=$('acct'),gh='class="btn ghost" style="color:#fff;border-color:rgba(255,255,255,.3)"';
+  if(!u){a.innerHTML='<button '+gh+' data-act="login">Log in</button><button class="btn neon" data-act="signup">Sign up</button>'}
+  else{a.innerHTML='<span class="pill '+(isPro(u)?'pro':'')+'">'+(isPro(u)?'PRO':'FREE · '+u.left+' left')+'</span>'+(isPro(u)?'':'<button class="btn neon" data-act="buy">Upgrade</button>')+(u.plan==='team'&&u.pro?'<button '+gh+' data-act="team">Team</button>':'')+(u.is_admin?'<a '+gh+' href="/admin">Admin</a>':'')+'<button '+gh+' data-act="logout">Log out</button>'}
   refresh();
 }
 let mode='signup';
-function authMode(m){mode=m;const s=m==='signup';$('aTitle').textContent=s?'Create your account':'Welcome back';$('aSub').textContent=s?'Free plan includes 10 geotagged photos every day.':'Log in to continue tagging.';$('aGo').textContent=s?'Sign up':'Log in';$('aSwitchTxt').textContent=s?'Already have an account?':'New here?';$('aSwitch').textContent=s?'Log in':'Create account';$('aMsg').textContent=''}
+function authMode(m){mode=m;const s=m==='signup',f=m==='forgot';
+  $('aTitle').textContent=s?'Create your account':f?'Reset your password':'Welcome back';
+  $('aSub').textContent=s?'Free plan includes 10 geotagged photos every day.':f?'Enter your email and we will send you a reset link.':'Log in to continue tagging.';
+  $('aGo').textContent=s?'Sign up':f?'Send reset link':'Log in';$('aPassWrap').hidden=f;$('aForgot').hidden=m!=='login';
+  $('aSwitchTxt').textContent=s?'Already have an account?':f?'Remembered it?':'New here?';$('aSwitch').textContent=s?'Log in':f?'Back to log in':'Create account';
+  $('aPass').autocomplete=s?'new-password':'current-password';note('aMsg','')}
+const note=(id,t,ok)=>{const e=$(id);e.textContent=t;e.style.color=ok?'var(--lime)':''};
 function openM(id){$(id).classList.add('on')}
 function closeM(){document.querySelectorAll('.modal').forEach(m=>m.classList.remove('on'))}
 document.querySelectorAll('[data-close]').forEach(b=>b.onclick=closeM);
 document.querySelectorAll('.modal').forEach(m=>m.addEventListener('click',e=>{if(e.target===m)closeM()}));
 document.addEventListener('keydown',e=>{if(e.key==='Escape')closeM()});
-$('aSwitch').onclick=()=>authMode(mode==='signup'?'login':'signup');
-$('aGo').onclick=()=>{
-  const email=$('aEmail').value.trim().toLowerCase(),pass=$('aPass').value,all=users();
-  if(!/^\S+@\S+\.\S+$/.test(email))return $('aMsg').textContent='Enter a valid email address.';
-  if(pass.length<6)return $('aMsg').textContent='Password must be at least 6 characters.';
-  if(mode==='signup'){
-    if(all[email])return $('aMsg').textContent='Account already exists. Please log in.';
-    saveUser({email,pass:btoa(unescape(encodeURIComponent(pass))),plan:'free',usage:{m:monthKey(),n:0}});toast('Account created. Welcome!');
-  }else{
-    if(!all[email]||all[email].pass!==btoa(unescape(encodeURIComponent(pass))))return $('aMsg').textContent='Wrong email or password.';
-    toast('Logged in.');
-  }
-  store.set('gts_session',email);closeM();renderAcct();
+$('aSwitch').onclick=()=>authMode(mode==='signup'?'login':mode==='forgot'?'login':'signup');
+$('aForgot').onclick=()=>authMode('forgot');
+$('aGo').onclick=async()=>{
+  if(!sb)return note('aMsg','Service unavailable. Please reload the page.');
+  const email=$('aEmail').value.trim().toLowerCase(),pass=$('aPass').value,btn=$('aGo');
+  if(!/^\S+@\S+\.\S+$/.test(email))return note('aMsg','Enter a valid email address.');
+  btn.disabled=true;note('aMsg','');
+  try{
+    if(mode==='forgot'){const r=await sb.auth.resetPasswordForEmail(email,{redirectTo:location.origin+'/'});if(r.error)throw r.error;note('aMsg','If an account exists for this email, a reset link is on its way. Check your inbox and spam folder.',true)}
+    else{
+      if(pass.length<8)throw new Error('Password must be at least 8 characters.');
+      if(mode==='signup'){const r=await sb.auth.signUp({email,password:pass,options:{emailRedirectTo:location.origin+'/'}});if(r.error)throw r.error;
+        if(r.data.session){closeM();toast('Account created. Welcome!')}else note('aMsg','Almost done! We sent a confirmation link to your email. Click it, then log in.',true)}
+      else{const r=await sb.auth.signInWithPassword({email,password:pass});if(r.error)throw r.error;closeM();toast('Logged in.')}
+    }
+  }catch(e){note('aMsg',e.message==='Invalid login credentials'?'Wrong email or password.':(e.message||'Something went wrong. Try again.'))}
+  btn.disabled=false;await loadStatus();
 };
-document.addEventListener('click',e=>{
+if(sb)sb.auth.onAuthStateChange(ev=>{if(ev==='PASSWORD_RECOVERY')openM('mReset');setTimeout(loadStatus,0)});
+$('rGo').onclick=async()=>{const p=$('rPass').value;if(p.length<8)return note('rMsg','Password must be at least 8 characters.');
+  const r=await sb.auth.updateUser({password:p});if(r.error)return note('rMsg',r.error.message);closeM();toast('Password updated. You are logged in.');loadStatus()};
+document.addEventListener('click',async e=>{
   const b=e.target.closest('[data-act]');if(!b)return;const a=b.dataset.act;
   if(a==='signup'){authMode('signup');openM('mAuth')}
   else if(a==='login'){authMode('login');openM('mAuth')}
-  else if(a==='logout'){store.set('gts_session',null);renderAcct();toast('Logged out.')}
+  else if(a==='logout'){if(sb)await sb.auth.signOut();S.st=null;renderAcct();toast('Logged out.')}
   else if(a==='team'){openTeam()}
   else if(a==='buy'){if(!me()){authMode('signup');openM('mAuth');toast('Create an account first.');return}openPay(b.dataset.plan)}
 });
@@ -317,26 +334,39 @@ function openPay(p){
   $('payAmt').textContent=(sel.plan==='team'?'Team · '+seatsN()+' seats':'Solo')+' · '+(cyc==='y'?'yearly':'monthly')+' · '+fmt(t,cur);
   $('payPk').hidden=!pk;$('payUs').hidden=pk;$('pStep1').hidden=false;$('pStep2').hidden=true;
   $('pAmtBig').textContent=fmt(t,cur);$('pAcct').textContent=CONFIG.phone+' ('+CONFIG.bank.title+')';
-  $('usWa').href=wa(reqText('\nPlease send me a USD payment link.'));$('simRow').hidden=!CONFIG.demo;$('payMsg').textContent='';openM('mPay');
+  $('usWa').href=wa(reqText('\nPlease send me a USD payment link.'));$('payMsg').textContent='';openM('mPay');
 }
 $('pCopy').onclick=()=>{(navigator.clipboard?navigator.clipboard.writeText(CONFIG.phone):Promise.reject()).then(()=>toast('Number copied.'),()=>toast(CONFIG.phone))};
 $('pNext').onclick=()=>{$('pStep1').hidden=true;$('pStep2').hidden=false};$('pBack').onclick=()=>{$('pStep2').hidden=true;$('pStep1').hidden=false};
 document.querySelectorAll('.pm').forEach(b=>b.onclick=()=>{payM=b.dataset.m;document.querySelectorAll('.pm').forEach(x=>x.classList.toggle('on',x===b))});
-$('payGo').onclick=()=>{const u=me(),num=$('payNum').value.replace(/[\s-]/g,''),ref=$('payRef').value.trim();
+$('payGo').onclick=async()=>{const u=me(),num=$('payNum').value.replace(/[\s-]/g,''),ref=$('payRef').value.trim();
   if(!/^(03\d{9}|\+?923\d{9})$/.test(num))return $('payMsg').textContent='Enter a valid mobile number, e.g. 03XX XXXXXXX.';
   if(ref.length<6)return $('payMsg').textContent='Enter the transaction ID from your payment message.';
-  u.pending={plan:sel.plan,amount:fmt(total(sel.plan),cur),via:payM,num,ref};saveUser(u);closeM();
-  window.open(wa(reqText('\nPaid via: '+payM+'\nMy number: '+num+'\nTransaction ID: '+ref)),'_blank','noopener');
-  toast('Request ready. Send it on WhatsApp and we will approve your plan.')};
-$('simPro').onclick=()=>{const u=me();u.plan=sel.plan;if(sel.plan==='team')u.team={seats:seatsN(),members:[]};saveUser(u);closeM();renderAcct();toast('Preview: '+sel.plan+' plan activated.')};
-$('waFab').href=wa('Hi, I need help with GeoTag Studio');
-function openTeam(){const u=me();if(!u||!u.team)return;const t=u.team;
-  $('tmInfo').textContent='Seats used: '+(t.members.length+1)+' of '+t.seats+'. Invited people get Pro access when they sign up or log in with that email.';
-  $('tmList').innerHTML='<div class="mem"><span>'+esc(u.email)+' <small>(owner)</small></span></div>'+t.members.map((m,i)=>'<div class="mem"><span>'+esc(m)+'</span><button class="link" data-rm="'+i+'">Remove</button></div>').join('');
-  $('tmMsg').textContent='';$('tmAdd').disabled=t.members.length+1>=t.seats;openM('mTeam')}
-$('tmAdd').onclick=()=>{const u=me(),e=$('tmEmail').value.trim().toLowerCase();if(!/^\S+@\S+\.\S+$/.test(e))return $('tmMsg').textContent='Enter a valid email.';
-  if(e===u.email||u.team.members.includes(e))return $('tmMsg').textContent='Already on your team.';u.team.members.push(e);saveUser(u);$('tmEmail').value='';openTeam();refresh()};
-$('tmList').onclick=ev=>{const i=ev.target.dataset.rm;if(i===undefined)return;const u=me();u.team.members.splice(+i,1);saveUser(u);openTeam()};
+  const win=window.open('','_blank');if(win)win.opener=null;$('payGo').disabled=true;
+  try{const g=await sb.auth.getUser();const r=await sb.from('payment_requests').insert({user_id:g.data.user.id,email:u.email,plan:sel.plan,cycle:cyc,seats:sel.plan==='team'?seatsN():1,amount:fmt(total(sel.plan),cur),via:payM,wallet_number:num,txn_id:ref});
+    if(r.error)throw r.error;
+    const url=wa(reqText('\nPaid via: '+payM+'\nMy number: '+num+'\nTransaction ID: '+ref));if(win)win.location=url;else location.href=url;
+    closeM();toast('Request saved. We will verify your payment and activate your plan. You can also message us on WhatsApp.')}
+  catch(e){if(win)win.close();$('payMsg').textContent='Could not save your request: '+(e.message||'try again')}
+  $('payGo').disabled=false};
+async function openTeam(){const u=me();if(!u||u.plan!=='team')return;const q=await sb.rpc('team_list'),m=q.data||[];
+  $('tmInfo').textContent='Seats used: '+(m.length+1)+' of '+u.seats+'. Invited people get Pro access automatically when they sign up or log in with that email.';
+  $('tmList').innerHTML='<div class="mem"><span>'+esc(u.email)+' <small>(owner)</small></span></div>'+m.map(x=>'<div class="mem"><span>'+esc(x)+'</span><button class="link" data-rm="'+esc(x)+'">Remove</button></div>').join('');
+  $('tmMsg').textContent='';$('tmAdd').disabled=m.length+1>=u.seats;openM('mTeam')}
+$('tmAdd').onclick=async()=>{const r=await sb.rpc('team_add',{e:$('tmEmail').value.trim()});if(r.error)return $('tmMsg').textContent=r.error.message;$('tmEmail').value='';openTeam()};
+$('tmList').onclick=async ev=>{const e=ev.target.dataset.rm;if(e===undefined)return;await sb.rpc('team_remove',{e});openTeam()};
+async function loadAdmin(){
+  const el=$('admReq'),m=me();if(!sb)return;
+  if(!m||!m.is_admin){$('admMsg').textContent='Admins only. Log in with the admin account.';el.innerHTML='';return}
+  $('admMsg').textContent='Signed in as '+m.email;
+  const q=await sb.rpc('admin_requests',{p_status:'pending'});if(q.error){el.textContent=q.error.message;return}
+  el.innerHTML=q.data.length?q.data.map(r=>'<div class="card" style="margin-bottom:10px"><b>'+esc(r.email)+'</b> · '+esc(r.plan)+(r.plan==='team'?' ('+r.seats+' seats)':'')+' · '+(r.cycle==='y'?'yearly':'monthly')+' · <b>'+esc(r.amount)+'</b><br><small style="color:var(--mute)">'+esc(r.via||'')+' · wallet '+esc(r.wallet_number||'')+' · TID '+esc(r.txn_id||'')+' · '+new Date(r.created_at).toLocaleString()+'</small><div style="margin-top:10px;display:flex;gap:8px"><button class="btn neon" data-ap="'+r.id+'">Approve</button><button class="btn danger" data-rj="'+r.id+'">Reject</button></div></div>').join(''):'<p style="color:var(--mute)">No pending requests.</p>'}
+$('admReq').onclick=async ev=>{const a=ev.target.dataset.ap,r=ev.target.dataset.rj;if(!a&&!r)return;if(!confirm(a?'Approve this payment and activate the plan?':'Reject this request?'))return;
+  const q=await sb.rpc(a?'admin_approve':'admin_reject',{rid:+(a||r)});if(q.error)return toast(q.error.message);toast(a?'Approved. Plan activated.':'Rejected.');loadAdmin()};
+$('admGo').onclick=async()=>{const q=await sb.rpc('admin_grant',{p_email:$('admEmail').value,p_plan:$('admPlan').value,p_months:+$('admMonths').value||1,p_seats:+$('admSeats').value||1});
+  if(q.error)return toast(q.error.message);toast('Plan updated.');$('admQ').oninput()};
+let aqt;$('admQ').oninput=()=>{clearTimeout(aqt);aqt=setTimeout(async()=>{if(!sb)return;const q=await sb.rpc('admin_users',{p_search:$('admQ').value});
+  $('admUsers').innerHTML=(q.data||[]).map(u=>'<div class="mem"><span>'+esc(u.email)+'</span><span>'+esc(u.plan)+(u.plan_expires?' · until '+u.plan_expires.slice(0,10):'')+'</span></div>').join('')},300)};
 $('cMail').textContent=CONFIG.email;
 $('cGo').onclick=()=>{const n=$('cN').value.trim(),e=$('cE').value.trim(),m=$('cM').value.trim();
   if(!n||!/^\S+@\S+\.\S+$/.test(e)||m.length<10)return $('cMsg').textContent='Please fill in your name, a valid email and a message (10+ characters).';
@@ -346,7 +376,7 @@ const TITLES={home:'GeoTag Studio – Free Bulk Geotag Photos for Google Busines
 function route(){const p=location.pathname.replace(/^\/|\/$|\.html$/g,''),h=(p&&document.getElementById('v-'+p))?p:location.hash.slice(1),el=h&&document.getElementById('v-'+h),v=el&&el.classList.contains('view')?h:'home';
   document.querySelectorAll('.view').forEach(e=>e.hidden=e.id!=='v-'+v);document.title=(v!=='home'&&document.getElementById('v-'+v).dataset.title)||TITLES[v]||TITLES.home;
   const t=v==='home'&&h&&document.getElementById(h);if(t)t.scrollIntoView();else scrollTo(0,0)}
-addEventListener('hashchange',route);route();
+addEventListener('hashchange',route);route();if(document.getElementById('v-admin')&&!document.getElementById('v-admin').hidden)setTimeout(loadAdmin,400);
 
 /* ---------- tool ---------- */
 const list=$('bizList'),MAX_DIM=2000;
@@ -447,7 +477,7 @@ async function run(){
   setS('Creating ZIP...');
   const blob=await zip.generateAsync({type:'blob',compression:'DEFLATE',compressionOptions:{level:6}});
   const url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;const bn=[...new Set(jobs.map(j=>slug(j.name)).filter(Boolean))];a.download=(bn.length===1?bn[0]:'geotagged-photos')+'.zip';document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),4000);
-  if(!isPro(u)){u.usage={m:monthKey(),n:used(u)+ok};saveUser(u)}
+  if(!isPro(u)){try{await sb.rpc('add_usage',{n:ok})}catch(e){}await loadStatus()}
   setS('Done: '+ok+' photos tagged'+(errs.length?', '+errs.length+' failed':'')+'.');setP(100);renderAcct();
 }
 $('goBtn').onclick=run;
