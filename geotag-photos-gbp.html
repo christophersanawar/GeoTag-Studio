@@ -386,13 +386,13 @@ const list=$('bizList'),MAX_DIM=2000;
 const esc=s=>String(s).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
 function rowHTML(i,p){p=p||{};return `<div class="row"><span class="idx">Post ${i+1}</span><button class="rm" title="Remove this post" aria-label="Remove post">✕</button>
 <label class="drop"><input type="file" accept="image/*" class="pf"><img class="th" alt=""><span>Choose photo</span></label>
-<div class="fields"><input class="pk" placeholder="Keywords (comma-separated, e.g. plumber lahore, emergency repair)" value="${esc(p.keywords||'')}"><textarea class="pd" placeholder="Description (about this post)">${esc(p.description||'')}</textarea></div></div>`}
+<div class="fields"><input class="pk" placeholder="Keywords (auto-filled from photo name, edit anytime, e.g. plumber lahore)" value="${esc(p.keywords||'')}"><textarea class="pd" placeholder="Description (about this post)">${esc(p.description||'')}</textarea></div></div>`}
 function addBiz(pre){
   pre=pre||{};const posts=(pre.posts&&pre.posts.length)?pre.posts:[{},{},{},{},{}];
   const c=document.createElement('div');c.className='biz';
   c.innerHTML=`<div class="biz-h"><input class="b-name" placeholder="Business name" value="${esc(pre.name||'')}"><input class="b-lat" placeholder="Latitude" value="${esc(pre.lat||'')}"><input class="b-lng" placeholder="Longitude" value="${esc(pre.lng||'')}">
 <button class="maps">📍 Find on Google Maps</button><span class="badge">0/0</span><button class="btn ghost tg" style="color:#fff;border-color:rgba(255,255,255,.3);padding:7px 12px" title="Collapse">▾</button><button class="btn danger rb" style="background:#fff;padding:7px 12px">✕ Remove</button></div>
-<div class="mapbox" hidden><div class="mcard"><div class="mbar"><span class="ct"></span><button class="mb m-map on">Map</button><button class="mb m-sat">Satellite</button><button class="mb m-out" title="Zoom out">−</button><button class="mb m-in" title="Zoom in">+</button><button class="mb m-cp">Copy</button><a class="mb m-go" target="_blank" rel="noopener">Open ↗</a></div><iframe class="mp" title="Location preview" loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe><div class="mapnote">Check that the pin sits on your real entrance. If it lands in the sea, latitude and longitude are probably swapped.</div></div></div><div class="posts"></div><div style="padding:0 14px 14px"><button class="btn ghost ap" style="font-size:12.5px">+ Add another post</button></div>`;
+<div class="mapbox" hidden><div class="mcard"><div class="mbar"><span class="ct"></span><button class="mb m-map on">Map</button><button class="mb m-sat">Satellite</button><button class="mb m-out" title="Zoom out">−</button><button class="mb m-in" title="Zoom in">+</button><button class="mb m-cp">Copy</button><a class="mb m-go" target="_blank" rel="noopener">Open ↗</a></div><iframe class="mp" title="Location preview" loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe><div class="mapnote">Check that the pin sits on your real entrance. If it lands in the sea, latitude and longitude are probably swapped.</div></div></div><div class="posts"></div><div style="padding:0 14px 14px"><button class="btn ghost ap" style="font-size:12.5px">+ Add another post</button> <button class="btn ghost af" style="font-size:12.5px" title="Pick a folder: every image inside is added as a post">📁 Add folder</button> <button class="btn ghost am" style="font-size:12.5px" title="Select many photos at once">🖼️ Add many photos</button><input type="file" class="fi" webkitdirectory multiple hidden><input type="file" class="mi" accept="image/*" multiple hidden></div>`;
   list.appendChild(c);const g=c.querySelector('.posts');
   posts.forEach(p=>addRow(g,p));
   const lat=c.querySelector('.b-lat'),lng=c.querySelector('.b-lng');
@@ -411,15 +411,32 @@ function addBiz(pre){
   c.querySelector('.tg').onclick=function(){const h=g.style.display==='none';g.style.display=h?'flex':'none';c.querySelector('.ap').parentNode.style.display=h?'block':'none';this.textContent=h?'▾':'▸'};
   c.querySelector('.rb').onclick=()=>{if(confirm('Delete this business and its posts?')){c.remove();refresh()}};
   c.querySelector('.ap').onclick=()=>{addRow(g,{});refresh()};
+  const addFiles=files=>{
+    let imgs=[...files].filter(f=>/^image\//.test(f.type)||/\.(jpe?g|png|webp|heic|heif)$/i.test(f.name)).sort((a,b)=>a.name.localeCompare(b.name,undefined,{numeric:true}));
+    if(!imgs.length)return toast('No images found in that selection.');
+    if(imgs.length>200){imgs=imgs.slice(0,200);toast('Only the first 200 images were added.')}
+    const rows=()=>[...g.querySelectorAll('.row')];let n=0;
+    imgs.forEach(file=>{let r=rows().find(x=>!x.querySelector('.pf').files[0]);if(!r){addRow(g,{});r=rows().pop()}
+      try{const dt=new DataTransfer();dt.items.add(file);const pf=r.querySelector('.pf');pf.files=dt.files;pf.dispatchEvent(new Event('change'));n++}catch(e){}});
+    refresh();toast(n+' photo'+(n===1?'':'s')+' added. Keywords were filled from the file names. You can edit them.')};
+  c.querySelector('.af').onclick=()=>c.querySelector('.fi').click();c.querySelector('.am').onclick=()=>c.querySelector('.mi').click();
+  c.querySelector('.fi').onchange=function(){addFiles(this.files);this.value=''};c.querySelector('.mi').onchange=function(){addFiles(this.files);this.value=''};
   refresh();
 }
+function niceName(n){
+  let t=String(n||'').replace(/\.[^.]+$/,'').replace(/[_\-\.]+/g,' ').replace(/\s+/g,' ').trim();
+  if(!t||/^(img|dsc|dscn|dcim|pxl|mvimg|image|photo|screenshot|whatsapp image|whatsapp|signal)?\s*\d[\d\s]*(at.*)?$/i.test(t)||/^\d[\d\s]*$/.test(t))return '';
+  return t}
+function autoKw(r,file){const k=r.querySelector('.pk');if(!k)return;const cur=k.value.trim(),prev=k.dataset.auto||'';
+  if(!file){if(cur&&cur===prev){k.value='';k.dataset.auto=''}return}
+  const nm=niceName(file.name);if(nm&&(!cur||cur===prev)){k.value=nm;k.dataset.auto=nm}else if(!nm&&cur&&cur===prev){k.value='';k.dataset.auto=''}}
 function addRow(g,p){
   const w=document.createElement('div');w.innerHTML=rowHTML(g.children.length,p);const r=w.firstElementChild;g.appendChild(r);
   const f=r.querySelector('.pf'),d=r.querySelector('.drop'),t=r.querySelector('.th'),s=r.querySelector('.drop span');
   f.onchange=()=>{const file=f.files[0];if(t.dataset.u)URL.revokeObjectURL(t.dataset.u);
-    if(file){const u=URL.createObjectURL(file);t.dataset.u=u;t.src=u;t.style.display='block';s.textContent=file.name;d.classList.add('has');
+    if(file){const u=URL.createObjectURL(file);t.dataset.u=u;t.src=u;t.style.display='block';s.textContent=file.name;d.classList.add('has');autoKw(r,file);
       if(/\.(heic|heif)$/i.test(file.name))toast('HEIC photos may fail. Convert to JPEG first.')}
-    else{t.style.display='none';s.textContent='Choose photo';d.classList.remove('has')}refresh()};
+    else{t.style.display='none';s.textContent='Choose photo';d.classList.remove('has');autoKw(r,null)}refresh()};
   r.querySelector('.rm').onclick=()=>{r.remove();Array.from(g.children).forEach((x,i)=>x.querySelector('.idx').textContent='Post '+(i+1));refresh()};
 }
 function refresh(){
